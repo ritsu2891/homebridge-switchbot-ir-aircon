@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "raspi-node-sht31": "^1.0.1"
   }
 }

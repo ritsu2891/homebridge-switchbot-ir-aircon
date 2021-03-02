@@ -1,6 +1,7 @@
 import { Service, Logger, API, AccessoryConfig } from 'homebridge';
 import { setup, pushIR, MODE, POW } from './switchbot';
 import { Characteristic } from "hap-nodejs";
+import { getTemp } from "./temperature";
 
 const UNITS = {
   C: Characteristic.TemperatureDisplayUnits.CELSIUS,
@@ -44,7 +45,7 @@ export class ExamplePlatformAccessory {
       .on('get', this.handleTargetHeatingCoolingStateGet.bind(this))
       .on('set', this.handleTargetHeatingCoolingStateSet.bind(this));
     this.airconService.getCharacteristic(Characteristic.CurrentTemperature)
-      .on('get', (callback) => { callback(null, 15) });
+      .on('get', this.handleCurrentTemperatureGet.bind(this));
     this.airconService.getCharacteristic(Characteristic.TargetTemperature)
       .setProps({
         minValue: 16,
@@ -92,6 +93,15 @@ export class ExamplePlatformAccessory {
     callback(null);
     this.targetTemperature = value;
     this.syncStateIR();
+  }
+
+  async handleCurrentTemperatureGet(callback) {
+    try {
+      const temp = await getTemp();
+      callback(null, temp);
+    } catch (e) {
+      callback(null, 15);
+    }
   }
 
   async syncStateIR() {
