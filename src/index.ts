@@ -5,3 +5,4 @@ import { ExamplePlatformAccessory } from './platformAccessory';
 export = (api: API) => {
   api.registerAccessory('Aircon', ExamplePlatformAccessory);
 };
+
