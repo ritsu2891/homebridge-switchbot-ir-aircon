@@ -4,6 +4,7 @@ let api = axios.create({
   responseType: 'json',
 });
 let deviceId = "";
+let meterDeviceId = "";
 
 export const MODE = {
   AUTO: 1, // 自動
@@ -39,18 +40,19 @@ export async function setup(token: string) {
 async function discoverDevice() {
   try {
     const devices = (await api.get(DeviceURL)).data;
-    if (devices.body.infraredRemoteList.length == 0) {
-      return false;
-    }
-    for (let device of devices.body.infraredRemoteList) {
-      if (device.remoteType == 'Air Conditioner') {
-        deviceId = device.deviceId;
-        return true;
+    for (let device of devices.body.deviceList) {
+      if (meterDeviceId === "" && device.deviceType === 'Meter') {
+        meterDeviceId = device.deviceId;
       }
     }
-    return false;
+    for (let device of devices.body.infraredRemoteList) {
+      if (deviceId === "" && device.remoteType == 'Air Conditioner') {
+        deviceId = device.deviceId;
+      }
+    }
+    return;
   } catch (e) {
-    return false;
+    return;
   }
 }
 
@@ -62,5 +64,34 @@ export async function pushIR(temperature: number, mode: number, active: boolean)
       command: 'setAll',
     }
     await api.post(`${DeviceURL}/${deviceId}/commands`, payload);
+  }
+}
+
+export async function getMaterStatus() {
+  let falseStatus = {
+    sucess: false
+  };
+  try {
+    if (meterDeviceId !== "") {
+      const deviceStatus = (
+        await api.get(`${DeviceURL}/${meterDeviceId}/status`)
+      ).data;
+      if (deviceStatus.message === 'success') {
+        let status = {
+          sucess: true,
+          humidity: deviceStatus.body?.humidity ?? undefined,
+          temperature: deviceStatus.body?.temperature ?? undefined,
+          batteryLevel: deviceStatus.body ? 100 : 10,
+          batteryLow: deviceStatus.body ? false : true
+        }
+        return status;
+      } else {
+        return falseStatus;
+      }
+    } else {
+      return falseStatus;
+    }
+  } catch (e) {
+    return falseStatus;
   }
 }
