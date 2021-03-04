@@ -1,7 +1,6 @@
-import { Service, Logger, API, AccessoryConfig } from 'homebridge';
-import { setup, pushIR, MODE, POW } from './switchbot';
+import { Service, Logger, API, AccessoryConfig, Units } from 'homebridge';
+import { setup, pushIR, getMaterStatus, MODE, POW } from './switchbot';
 import { Characteristic } from "hap-nodejs";
-import { getTemp } from "./temperature";
 
 const UNITS = {
   C: Characteristic.TemperatureDisplayUnits.CELSIUS,
@@ -18,6 +17,10 @@ export class ExamplePlatformAccessory {
   units = UNITS.C;
 
   mode = MODE.HEAT;
+
+  currentMaterState: any = {
+    sucess: false
+  }
 
   constructor(
     public readonly log: Logger,
@@ -45,6 +48,13 @@ export class ExamplePlatformAccessory {
       .on('get', this.handleTargetHeatingCoolingStateGet.bind(this))
       .on('set', this.handleTargetHeatingCoolingStateSet.bind(this));
     this.airconService.getCharacteristic(Characteristic.CurrentTemperature)
+      .setProps({
+        unit: Units['CELSIUS'],
+        validValueRanges: [-273.15, 100],
+        minValue: -273.15,
+        maxValue: 100,
+        minStep: 0.1,
+      })
       .on('get', this.handleCurrentTemperatureGet.bind(this));
     this.airconService.getCharacteristic(Characteristic.TargetTemperature)
       .setProps({
@@ -96,11 +106,12 @@ export class ExamplePlatformAccessory {
   }
 
   async handleCurrentTemperatureGet(callback) {
-    try {
-      const temp = await getTemp();
-      callback(null, temp);
-    } catch (e) {
-      callback(null, 15);
+    callback(null, this.currentMaterState.temperature ?? 15);
+    this.currentMaterState = await getMaterStatus();
+    if (this.currentMaterState.success) {
+      this.airconService
+        .getCharacteristic(Characteristic.CurrentTemperature)
+        .updateValue(this.currentMaterState.temperature);
     }
   }
 
